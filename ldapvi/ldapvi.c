@@ -791,7 +791,7 @@ save_ldif(tparser *parser, GArray *offsets, char *clean, char *data,
 	compare(parser, &ldif_handler, s, offsets, clean, data, 0, 0);
 	if (fclose(s) == EOF) syserr();
 
-	printf("Your changes have been saved to %s.\n", name->str);
+	printf("Your changes have been saved to %s\n", name->str);
 	return 0;
 }
 
