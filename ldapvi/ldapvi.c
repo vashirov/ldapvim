@@ -98,7 +98,6 @@ cleanup(int rc, char *pathname)
 	if (tcgetattr(0, &term) == -1)
 		/* oh, running without a terminal */
 		return;
-	term.c_lflag |= ICANON;
 	term.c_lflag |= ECHO;
 	if (tcsetattr(0, TCSANOW, &term) == -1) syserr();
 }
