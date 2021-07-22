@@ -283,6 +283,7 @@ int adjoin_str(GPtrArray *, char *);
 int adjoin_ptr(GPtrArray *, void *);
 void init_dialog(tdialog *, enum dialog_mode, char *, char *);
 void dialog(char *header, tdialog *, int, int);
+void fdcp(int fdsrc, int fddst);
 
 /*
  * schema.c

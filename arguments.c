@@ -562,18 +562,21 @@ parse_profile_line(tattribute *attribute, cmdline *result, GPtrArray *ctrls)
 
 	for (i = 0; i < values->len; i++) {
 		char *value = array2string(g_ptr_array_index(values, i));
-		if (o->argInfo == 0)
+		if (o->argInfo == 0) {
 			if (!strcmp(value, "no"))
 				continue;
-			else if (strcmp(value, "yes")) {
-				fprintf(stderr,
-					"invalid value '%s' to configuration"
-					" option '%s', expected 'yes' or"
-					" 'no'.\n",
-					value,
-					name);
-				exit(1);
-			}
+			else {
+                if (strcmp(value, "yes")) {
+                    fprintf(stderr,
+                        "invalid value '%s' to configuration"
+                        " option '%s', expected 'yes' or"
+                        " 'no'.\n",
+                        value,
+                        name);
+                    exit(1);
+                }
+            }
+        }
 		parse_argument(o->val, value, result, ctrls);
 	}
 }

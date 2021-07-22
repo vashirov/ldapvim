@@ -593,6 +593,7 @@ set_meta_keymap(Keymap keymap, Keymap meta_keymap)
 		meta_keymap = rl_copy_keymap((Keymap) keymap[27].function);
 	keymap[27].type = ISKMAP;
 	keymap[27].function = (rl_command_func_t *) meta_keymap;
+	return 0;
 }
 
 

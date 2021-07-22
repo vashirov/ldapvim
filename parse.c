@@ -17,6 +17,7 @@
  * 02110-1301 USA.
  */
 #define _XOPEN_SOURCE
+#include <crypt.h>
 #include <unistd.h>
 #include "common.h"
 
@@ -221,7 +222,7 @@ read_line1(FILE *s, GString *name, GString *value)
 	} while (c != -1);
 
 	if (read_lhs(s, name) == -1) return -1;
-	if ( encoding = memchr(name->str, ':', name->len)) {
+	if ( (encoding = memchr(name->str, ':', name->len)) ) {
 		encoding++;
 		name->len = encoding - name->str - 1;
 		name->str[name->len] = 0;

@@ -718,7 +718,7 @@ do_connect(char *server, bind_options *bind_options,
 
 	if (ldap_set_option(0, LDAP_OPT_X_TLS_REQUIRE_CERT, (void *) &tls))
 		ldaperr(0, "ldap_set_option(LDAP_OPT_X_TLS)");
-	if ( rc = ldap_initialize(&ld, server)) {
+	if ( (rc = ldap_initialize(&ld, server))) {
 		fprintf(stderr, "ldap_initialize: %s\n", ldap_err2string(rc));
 		exit(1);
 	}
@@ -763,7 +763,7 @@ save_ldif(tparser *parser, GArray *offsets, char *clean, char *data,
 	if (gethostname(name->str + name->len, 300 - name->len) == -1)
 		syserr();
 	name->len = strlen(name->str);
-	g_string_sprintfa(name, "-%d.ldif", getpid());
+	g_string_append_printf(name, "-%d.ldif", getpid());
 
 	if ( (fd = open(name->str, O_WRONLY | O_CREAT | O_EXCL, 0600)) == -1) {
 		int error = errno;
@@ -1236,7 +1236,7 @@ write_config(LDAP *ld, FILE *f, cmdline *cmdline)
 			      f);
 		for (i = 0; i < basedns->len; i++) {
 			if (basedns->len > 1) fputc('#', f);
-			fprintf(f, "BASE %s\n", g_ptr_array_index(basedns, i));
+			fprintf(f, "BASE %s\n", (char *)g_ptr_array_index(basedns, i));
 		}
 	} else {
 		if (!cmdline->discover)

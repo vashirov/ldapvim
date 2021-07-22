@@ -212,7 +212,7 @@ ldif_read_line1(FILE *s, GString *name, GString *value)
 		}
 	} while (c != -1);
 
-	if ( c = ldif_read_ad(s, name)) return c;
+	if ( (c = ldif_read_ad(s, name))) return c;
 	if ( (encoding = ldif_read_encoding(s)) == -1) return -1;
 
 	switch (encoding) {

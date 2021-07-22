@@ -18,6 +18,7 @@
  */
 #include "common.h"
 #include "config.h"
+#include <ldap.h>
 
 typedef void (*note_function)(void *, void *, void *);
 
