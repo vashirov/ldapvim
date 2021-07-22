@@ -46,7 +46,7 @@ carray_ptr_cmp(const void *aa, const void *bb)
 void
 fdcp(int fdsrc, int fddst)
 {
-	int n;
+	ssize_t n;
 	char buf[4096];
 
 	do {

@@ -147,7 +147,7 @@ struct ldapmodify_context {
 static int
 ldapmodify_error(struct ldapmodify_context *ctx, char *error)
 {
-	ldap_perror(ctx->ld, error);
+	fprintf(stderr, "%s\n", error);
 	if (!ctx->continuous)
 		return -1;
 	fputs("(error ignored)\n", stderr);
@@ -545,16 +545,21 @@ rebind_callback(
 static char *
 find_user(LDAP *ld, char *filter)
 {
+	int rc = LDAP_SUCCESS;
 	char *dn = 0;
 	LDAPMessage *result = 0;
 	LDAPMessage *entry = 0;
 
-	if (ldap_bind_s(ld, 0, 0, LDAP_AUTH_SIMPLE)) {
-		ldap_perror(ld, "ldap_bind");
+	rc = ldap_bind_s(ld, 0, 0, LDAP_AUTH_SIMPLE);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_bind_s: %s\n",
+                ldap_err2string(rc));
 		goto cleanup;
 	}
-	if (ldap_search_s(ld, 0, LDAP_SCOPE_SUBTREE, filter, 0, 0, &result)) {
-		ldap_perror(ld, "ldap_search");
+	rc = ldap_search_s(ld, 0, LDAP_SCOPE_SUBTREE, filter, 0, 0, &result);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_search_s: %s\n",
+                ldap_err2string(rc));
 		goto cleanup;
 	}
 	if ( !(entry = ldap_first_entry(ld, result))) {
@@ -613,8 +618,9 @@ rebind_sasl(LDAP *ld, bind_options *bind_options, char *dir, int verbose)
 	sasl_defaults_free(defaults);
 
 	if (rc != LDAP_SUCCESS) {
-		ldap_perror(ld, "ldap_sasl_interactive_bind_s");
-		return -1;
+		fprintf(stderr, "ldap_sasl_interactive_bind_s: %s\n",
+                ldap_err2string(rc));
+		return(rc);
 	}
 
 	if (verbose)
@@ -627,6 +633,7 @@ rebind_sasl(LDAP *ld, bind_options *bind_options, char *dir, int verbose)
 static int
 rebind_simple(LDAP *ld, bind_options *bo, int verbose)
 {
+	int rc = LDAP_SUCCESS;
 	if (bo->dialog == BD_ALWAYS
 	    || (bo->dialog == BD_AUTO && bo->user && !bo->password))
 	{
@@ -641,9 +648,11 @@ rebind_simple(LDAP *ld, bind_options *bo, int verbose)
 		/* user is a search filter, not a name */
 		if ( !(bo->user = find_user(ld, bo->user)))
 			return -1;
-	if (ldap_bind_s(ld, bo->user, bo->password, LDAP_AUTH_SIMPLE)) {
-		ldap_perror(ld, "ldap_bind");
-		return -1;
+	rc = ldap_bind_s(ld, bo->user, bo->password, LDAP_AUTH_SIMPLE);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_bind_s: %s\n",
+                ldap_err2string(rc));
+		return(rc);
 	}
 	if (verbose)
 		printf("Bound as %s.\n", bo->user);
@@ -673,8 +682,12 @@ rebind(LDAP *ld, bind_options *bind_options, int register_callback,
 		rebind_data->bind_options.password
 			= xdup(bind_options->password);
 		rebind_data->seen = 0;
-		if (ldap_set_rebind_proc(ld, rebind_callback, rebind_data))
-			ldaperr(ld, "ldap_set_rebind_proc");
+		rc = ldap_set_rebind_proc(ld, rebind_callback, rebind_data);
+		if (rc != LDAP_SUCCESS) {
+			fprintf(stderr, "ldap_set_rebind_proc: %s\n",
+					ldap_err2string(rc));
+			exit(rc);
+		}
 	}
 	return 0;
 }
@@ -706,8 +719,8 @@ do_connect(char *server, bind_options *bind_options,
 	   char *dir)
 {
 	LDAP *ld = 0;
-	int rc = 0;
-	int drei = 3;
+	int rc = LDAP_SUCCESS;
+	int ldapv3 = LDAP_VERSION3;
 
 	if (server && !strstr(server, "://")) {
 		char *url = xalloc(strlen(server) + sizeof("ldap://"));
@@ -715,33 +728,53 @@ do_connect(char *server, bind_options *bind_options,
 		strcpy(url + 7, server);
 		server = url;
 	}
-
-	if (ldap_set_option(0, LDAP_OPT_X_TLS_REQUIRE_CERT, (void *) &tls))
-		ldaperr(0, "ldap_set_option(LDAP_OPT_X_TLS)");
-	if ( (rc = ldap_initialize(&ld, server))) {
+	rc = ldap_set_option(0, LDAP_OPT_X_TLS_REQUIRE_CERT, (void *) &tls);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_set_option(LDAP_OPT_X_TLS_REQUIRE_CERT): %s\n",
+                ldap_err2string(rc));
+		exit(rc);
+	}
+	rc = ldap_initialize(&ld, server);
+	if (rc != LDAP_SUCCESS) {
 		fprintf(stderr, "ldap_initialize: %s\n", ldap_err2string(rc));
-		exit(1);
+		exit(rc);
 	}
 	if (!profileonlyp)
 		init_sasl_arguments(ld, bind_options);
-	if (ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &drei))
-		ldaperr(ld, "ldap_set_option(LDAP_OPT_PROTOCOL_VERSION)");
-	if (starttls)
-		if (ldap_start_tls_s(ld, 0, 0))
-			ldaperr(ld, "ldap_start_tls_s");
-	if (rebind(ld, bind_options, 1, dir, 0) == -1) {
+
+	rc = ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &ldapv3);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_set_option(LDAP_OPT_PROTOCOL_VERSION): %s\n", ldap_err2string(rc));
+		exit(rc);
+	}
+	if (starttls) {
+		rc = ldap_start_tls_s(ld, 0, 0);
+		if (rc != LDAP_SUCCESS) {
+			fprintf(stderr, "ldap_start_tls_s: %s\n", ldap_err2string(rc));
+			exit(1);
+		}
+	}
+	rc = rebind(ld, bind_options, 1, dir, 0);
+	if (rc != LDAP_SUCCESS) {
 		ldap_unbind_s(ld);
 		return 0;
 	}
 	/* after initial bind, always ask interactively (except in '!' rebinds,
 	 * which are special-cased): */
 	bind_options->dialog = BD_ALWAYS;
-	if (ldap_set_option(ld, LDAP_OPT_REFERRALS,
-                            referrals ? LDAP_OPT_ON : LDAP_OPT_OFF))
-		ldaperr(ld, "ldap_set_option(LDAP_OPT_REFERRALS)");
-	if (ldap_set_option(ld, LDAP_OPT_DEREF, (void *) &deref))
-		ldaperr(ld, "ldap_set_option(LDAP_OPT_DEREF)");
-
+	rc = ldap_set_option(ld, LDAP_OPT_REFERRALS,
+                            referrals ? LDAP_OPT_ON : LDAP_OPT_OFF);
+	if (rc != LDAP_SUCCESS) {
+			fprintf(stderr, "ldap_set_option(LDAP_OPT_REFERRALS): %s\n",
+					ldap_err2string(rc));
+			exit(rc);
+	}
+	rc = ldap_set_option(ld, LDAP_OPT_DEREF, (void *) &deref);
+	if (rc != LDAP_SUCCESS) {
+			fprintf(stderr, "ldap_set_option(LDAP_OPT_DEREF): %s\n",
+					ldap_err2string(rc));
+			exit(rc);
+	}
 	return ld;
 }
 
@@ -1141,13 +1174,23 @@ forget_deletions(tparser *p, GArray *offsets, char *clean, char *data)
 static void
 append_sort_control(LDAP *ld, GPtrArray *ctrls, char *keystring)
 {
+	int rc = LDAP_SUCCESS;
 	LDAPControl *ctrl;
 	LDAPSortKey **keylist;
 
-	if (ldap_create_sort_keylist(&keylist, keystring))
-		ldaperr(ld, "ldap_create_sort_keylist");
-	if (ldap_create_sort_control(ld, keylist, 1, &ctrl))
-		ldaperr(ld, "ldap_create_sort_keylist");
+	rc = ldap_create_sort_keylist(&keylist, keystring);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_create_sort_keylist: %s\n",
+                ldap_err2string(rc));
+		exit(rc);
+	}
+
+	rc = ldap_create_sort_control(ld, keylist, 1, &ctrl);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_create_sort_control: %s\n",
+                ldap_err2string(rc));
+		exit(rc);
+	}
 	g_ptr_array_add(ctrls, ctrl);
 }
 

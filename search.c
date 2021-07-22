@@ -63,13 +63,16 @@ void
 handle_result(LDAP *ld, LDAPMessage *result, int start, int n,
 	      int progress, int noninteractive)
 {
-        int rc;
-        int err;
-        char *matcheddn;
-        char *text;
+	int rc = LDAP_SUCCESS;
+	int err;
+	char *matcheddn;
+	char *text;
 
-        rc = ldap_parse_result(ld, result, &err, &matcheddn, &text, 0, 0, 0);
-        if (rc) ldaperr(ld, "ldap_parse_result");
+	rc = ldap_parse_result(ld, result, &err, &matcheddn, &text, 0, 0, 0);
+	if (rc == LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_parse_result: %s\n",
+				ldap_err2string(rc));
+	}
 
 	if (err) {
 		fprintf(stderr, "Search failed: %s\n", ldap_err2string(err));
@@ -103,14 +106,19 @@ handle_result(LDAP *ld, LDAPMessage *result, int start, int n,
 void
 log_reference(LDAP *ld, LDAPMessage *reference, FILE *s)
 {
-        char **refs;
+	int rc = LDAP_SUCCESS;
+    char **refs;
 	char **ptr;
 
-        if (ldap_parse_reference(ld, reference, &refs, 0, 0))
-		ldaperr(ld, "ldap_parse_reference");
+	rc = ldap_parse_reference(ld, reference, &refs, 0, 0);
+	if (rc == LDAP_SUCCESS){
+		fprintf(stderr, "ldap_parse_reference: %s\n",
+                ldap_err2string(rc));
+	}
 	fputc('\n', s);
-	for (ptr = refs; *ptr; ptr++)
+	for (ptr = refs; *ptr; ptr++){
 		fprintf(s, "# reference to: %s\n", *ptr);
+	}
 	ldap_value_free(refs);
 }
 
@@ -150,6 +158,7 @@ search_subtree(FILE *s, LDAP *ld, GArray *offsets, char *base,
 	       cmdline *cmdline, LDAPControl **ctrls, int notty, int ldif,
 	       tschema *schema)
 {
+	int rc = LDAP_SUCCESS;
 	int msgid;
 	LDAPMessage *result, *entry;
 	int start = offsets->len;
@@ -163,17 +172,22 @@ search_subtree(FILE *s, LDAP *ld, GArray *offsets, char *base,
 	else
 		entroid = 0;
 
-	if (ldap_search_ext(
+	rc = ldap_search_ext(
 		    ld, base,
 		    cmdline->scope, cmdline->filter, cmdline->attrs,
-		    0, ctrls, 0, 0, 0, &msgid))
-		ldaperr(ld, "ldap_search");
-
-	while (n >= 0)
-		switch (ldap_result(ld, msgid, 0, 0, &result)) {
+		    0, ctrls, 0, 0, 0, &msgid);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_search_ext: %s\n",
+                ldap_err2string(rc));
+		exit(rc);
+	}
+	while (n >= 0) {
+		rc = ldap_result(ld, msgid, 0, 0, &result);
+		switch (rc) {
 		case -1:
-		case 0:
-			ldaperr(ld, "ldap_result");
+		case LDAP_SUCCESS:
+			fprintf(stderr, "ldap_result: %s\n",
+                ldap_err2string(rc));
 		case LDAP_RES_SEARCH_ENTRY:
 			entry = ldap_first_entry(ld, result);
 			offset = ftell(s);
@@ -210,6 +224,7 @@ search_subtree(FILE *s, LDAP *ld, GArray *offsets, char *base,
 		default:
 			abort();
 		}
+	}
 	if (entroid)
 		entroid_free(entroid);
 }
@@ -263,13 +278,19 @@ search(FILE *s, LDAP *ld, cmdline *cmdline, LDAPControl **ctrls, int notty,
 LDAPMessage *
 get_entry(LDAP *ld, char *dn, LDAPMessage **result)
 {
+	int rc = LDAP_SUCCESS;
 	LDAPMessage *entry;
 	char *attrs[3] = {"+", "*", 0};
 
-	if (ldap_search_s(ld, dn, LDAP_SCOPE_BASE, 0, attrs, 0, result))
-		ldaperr(ld, "ldap_search");
-	if ( !(entry = ldap_first_entry(ld, *result)))
-		ldaperr(ld, "ldap_first_entry");
+	rc = ldap_search_s(ld, dn, LDAP_SCOPE_BASE, 0, attrs, 0, result);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_search_s: %s\n",
+                ldap_err2string(rc));
+		exit(rc);
+	}
+	if ( !(entry = ldap_first_entry(ld, *result))) {
+		fprintf(stderr, "ldap_first_entry\n");
+	}
 	return entry;
 }
 

@@ -137,6 +137,7 @@ schema_free(tschema *schema)
 tschema *
 schema_new(LDAP *ld)
 {
+	int rc = LDAP_SUCCESS;
 	LDAPMessage *result, *entry;
 	char **values;
 	char *subschema_dn;
@@ -145,12 +146,14 @@ schema_new(LDAP *ld)
 	char *attrs[2] = {"subschemaSubentry", 0};
 	tschema *schema;
 
-	if (ldap_search_s(ld, "", LDAP_SCOPE_BASE, 0, attrs, 0, &result)) {
-		ldap_perror(ld, "ldap_search");
+	rc = ldap_search_s(ld, "", LDAP_SCOPE_BASE, 0, attrs, 0, &result);
+	if (rc != LDAP_SUCCESS) {
+		fprintf(stderr, "ldap_search_s: %s\n",
+                ldap_err2string(rc));
 		return 0;
 	}
 	if ( !(entry = ldap_first_entry(ld, result))) {
-		ldap_perror(ld, "ldap_first_entry");
+		fprintf(stderr, "ldap_first_entry\n");
 		return 0;
 	}
 	values = ldap_get_values(ld, entry, "subschemaSubentry");

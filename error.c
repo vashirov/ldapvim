@@ -34,7 +34,7 @@
 #include <unistd.h>
 
 void
-do_syserr(char *file, int line)
+do_syserr(const char *file, int line)
 {
 	char buf[32];
 	snprintf(buf, sizeof(buf), "error (%s line %d)", file, line);
@@ -46,12 +46,5 @@ void
 yourfault(char *str)
 {
 	fprintf(stderr, "%s\n", str);
-	exit(1);
-}
-
-void
-ldaperr(LDAP *ld, char *str)
-{
-	ldap_perror(ld, str);
 	exit(1);
 }

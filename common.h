@@ -68,7 +68,6 @@ typedef struct tentroid {
 
 void do_syserr(char *file, int line);
 void yourfault(char *str);
-void ldaperr(LDAP *ld, char *str);
 
 /*
  * arguments.c
