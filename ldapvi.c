@@ -1215,11 +1215,14 @@ write_config(LDAP *ld, FILE *f, cmdline *cmdline)
 		ldap_get_option(ld, LDAP_OPT_URI, &server);
 	if (!server)
 		ldap_get_option(ld, LDAP_OPT_HOST_NAME, &server);
-	if (server)
-		if (strstr(server, "://"))
+	if (server) {
+		if (strstr(server, "://")) {
 			fprintf(f, "URI %s\n", server);
-		else
+		}
+		else {
 			fprintf(f, "HOST %s\n", server);
+		}
+	}
 
 	/* BASE */
 	fputc('\n', f);
@@ -1465,7 +1468,7 @@ copy_sasl_output(FILE *out, char *sasl)
 	int line = 0;
 	int c;
 
-	if (lstat(sasl, &st) == -1) return;
+	if (lstat(sasl, &st) == -1) return 0;
 	if ( !(in = fopen(sasl, "r"))) syserr();
 
 	if (st.st_size > 0) {
