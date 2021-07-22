@@ -759,7 +759,7 @@ save_ldif(tparser *parser, GArray *offsets, char *clean, char *data,
 	FILE *s;
 
 	GString *name = g_string_sized_new(300);
-	g_string_append(name, ",ldapvi-");
+	g_string_append(name, "ldapvi-");
 	if (gethostname(name->str + name->len, 300 - name->len) == -1)
 		syserr();
 	name->len = strlen(name->str);
